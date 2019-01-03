@@ -23,6 +23,8 @@ libstrongswan_ha_la_SOURCES = \
   ha_kernel.h ha_kernel.c \
   ha_ctl.h ha_ctl.c \
   ha_ike.h ha_ike.c \
+  ha_redis.h ha_redis.c \
   ha_child.h ha_child.c \
   ha_attribute.h ha_attribute.c
+libstrongswan_ha_la_LIBADD = -lhiredis
 libstrongswan_ha_la_LDFLAGS = -module -avoid-version

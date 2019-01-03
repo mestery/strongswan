@@ -23,6 +23,7 @@
 #include "ha_ctl.h"
 #include "ha_cache.h"
 #include "ha_attribute.h"
+#include "ha_redis.h"
 
 #include <daemon.h>
 #include <config/child_cfg.h>
@@ -88,6 +89,11 @@ struct private_ha_plugin_t {
 	 * Attribute provider
 	 */
 	ha_attribute_t *attr;
+
+	/**
+	 * Redis connection information.
+	 */
+	ha_redis_t *redis;
 };
 
 METHOD(plugin_t, get_name, char*,
@@ -149,6 +155,11 @@ static bool initialize_plugin(private_ha_plugin_t *this)
 	this->ike = ha_ike_create(this->socket, this->tunnel, this->cache);
 	this->child = ha_child_create(this->socket, this->tunnel, this->segments,
 								  this->kernel);
+	if ((this->redis = ha_redis_create()) == NULL) {
+		DBG1(DBG_CFG, "ha plugin failed redis intialization");
+		DESTROY_IF(this->redis);
+		return FALSE;
+	}
 	return TRUE;
 }
 
@@ -166,6 +177,7 @@ static bool plugin_cb(private_ha_plugin_t *this,
 		}
 		charon->bus->add_listener(charon->bus, &this->segments->listener);
 		charon->bus->add_listener(charon->bus, &this->ike->listener);
+		charon->bus->add_listener(charon->bus, &this->redis->listener);
 		charon->bus->add_listener(charon->bus, &this->child->listener);
 		charon->attributes->add_provider(charon->attributes,
 										 &this->attr->provider);
@@ -176,6 +188,7 @@ static bool plugin_cb(private_ha_plugin_t *this,
 											&this->attr->provider);
 		charon->bus->remove_listener(charon->bus, &this->segments->listener);
 		charon->bus->remove_listener(charon->bus, &this->ike->listener);
+		charon->bus->remove_listener(charon->bus, &this->redis->listener);
 		charon->bus->remove_listener(charon->bus, &this->child->listener);
 	}
 	return TRUE;
@@ -206,6 +219,7 @@ METHOD(plugin_t, destroy, void,
 	DESTROY_IF(this->kernel);
 	DESTROY_IF(this->socket);
 	DESTROY_IF(this->tunnel);
+	DESTROY_IF(this->redis);
 	free(this);
 }
 
